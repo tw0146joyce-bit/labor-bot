@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 勞健保 Telegram 機器人 2026年最新版
 功能：勞保/災保/健保/勞退費用試算、完整58級查詢、身障眷屬補助試算、常見問答
@@ -459,4 +460,4 @@ def main():
     # 在背景執行 HTTP health check server（給 Render 用）
     t = threading.Thread(target=run_health_server, daemon=True)
     t.start()
-    print(f"✅ Health server 啟動�
+    print(f"�
