@@ -5,6 +5,8 @@
 
 import os
 import logging
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import (
     Application, CommandHandler, MessageHandler,
@@ -437,20 +439,24 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 # ===== 主程式 =====
+class HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"OK")
+    def log_message(self, format, *args):
+        pass  # 靜音 HTTP log
+
+def run_health_server():
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(("0.0.0.0", port), HealthHandler)
+    server.serve_forever()
+
 def main():
     if not BOT_TOKEN:
         print("❌ 錯誤：請設定環境變數 BOT_TOKEN")
         return
-    app = Application.builder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("help", help_cmd))
-    app.add_handler(CommandHandler("rates", show_rates))
-    app.add_handler(CommandHandler("faq", show_faq))
-    app.add_handler(CallbackQueryHandler(faq_callback, pattern="^faq_"))
-    app.add_handler(CallbackQueryHandler(grade_callback, pattern="^grade_"))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    print("✅ 勞健保機器人啟動中...")
-    app.run_polling(allowed_updates=Update.ALL_TYPES)
-
-if __name__ == "__main__":
-    main()
+    # 在背景執行 HTTP health check server（給 Render 用）
+    t = threading.Thread(target=run_health_server, daemon=True)
+    t.start()
+    print(f"✅ Health server 啟動�
