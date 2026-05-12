@@ -455,9 +455,24 @@ def run_health_server():
 
 def main():
     if not BOT_TOKEN:
-        print("❌ 錯誤：請設定環境變數 BOT_TOKEN")
+        print("ERROR: BOT_TOKEN not set")
         return
-    # 在背景執行 HTTP health check server（給 Render 用）
+    # Start HTTP health check server in background (for Render)
     t = threading.Thread(target=run_health_server, daemon=True)
     t.start()
-    print(f"�
+    port = os.environ.get("PORT", "10000")
+    print("Health server started on port " + port)
+
+    app = Application.builder().token(BOT_TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("help", help_cmd))
+    app.add_handler(CommandHandler("rates", show_rates))
+    app.add_handler(CommandHandler("faq", show_faq))
+    app.add_handler(CallbackQueryHandler(faq_callback, pattern="^faq_"))
+    app.add_handler(CallbackQueryHandler(grade_callback, pattern="^grade_"))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    print("Bot starting...")
+    app.run_polling(allowed_updates=Update.ALL_TYPES)
+
+if __name__ == "__main__":
+    main()
