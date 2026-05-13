@@ -392,12 +392,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if text == "📊 費率總表":     await show_rates(update, context); return
     if text == "ℹ️ 使用說明":     await help_cmd(update, context); return
     if text == "🌐 網頁版計算機":
-        msg = "🌐 *勞健保網頁版計算機*
-
-點擊下方連結開啟網頁版，支援完整費用試算、級距查詢、身障補助計算：
-
-" + WEB_URL
-        await update.message.reply_text(msg, parse_mode="Markdown", reply_markup=MAIN_KEYBOARD)
+        web_msg = "🌐 勞健保網頁版計算機\n\n點擊下方連結開啟網頁版，支援完整費用試算、級距查詢、身障補助計算：\n\n" + WEB_URL
+        await update.message.reply_text(web_msg, parse_mode="Markdown", reply_markup=MAIN_KEYBOARD)
         return
 
     parts = text.replace("，"," ").split()
