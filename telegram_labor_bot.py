@@ -125,7 +125,11 @@ MAIN_KEYBOARD = ReplyKeyboardMarkup([
     ["♿ 身障補助試算", "❓ 常見問題"],
     ["📊 費率總表", "ℹ️ 使用說明"],
     ["🌐 網頁版計算機"],
+    ["🔐 退保用-勞保局(三合一)", "🔐 退保用-健保局"],
 ], resize_keyboard=True)
+
+# 只有這個 user ID 可以使用私密按鈕
+ADMIN_ID = 2039743487
 
 WEB_URL = "https://tw0146joyce-bit.github.io/labor-bot/"
 
@@ -378,6 +382,68 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if text == "🌐 網頁版計算機":
         web_msg = "🌐 *勞健保網頁版計算機*\n\n點擊下方連結開啟網頁版，支援完整費用試算、級距查詢、身障補助計算：\n\n" + WEB_URL
         await update.message.reply_text(web_msg, parse_mode="Markdown", reply_markup=MAIN_KEYBOARD)
+        return
+
+    if text == "🔐 退保用-勞保局(三合一)":
+        if update.effective_user.id != ADMIN_ID:
+            await update.message.reply_text("⛔ 無權限", reply_markup=MAIN_KEYBOARD)
+            return
+        msg = (
+            "🔐 *退保用－勞保局（三合一）*\n"
+            "🔗 https://edesk.bli.gov.tw/me/#/cpa/login\n"
+            "─────────────────\n\n"
+            "📍 *SETV（小饅）*\n"
+            "飛耀娛樂有限公司\n"
+            "勞保字號：15170517K\n"
+            "健保字號：157501678\n\n"
+            "凱耀娛樂有限公司\n"
+            "勞保字號：15175215W\n"
+            "健保字號：157786760\n\n"
+            "─────────────────\n"
+            "📍 *智影（迪倫 E123586446）*\n"
+            "益捷資訊服務有限公司\n"
+            "勞保保險證號：15104501H\n"
+            "健保代號：153191952\n"
+            "帳號：90072433\n"
+            "密碼：admin@9007\n\n"
+            "麻酷數位有限公司\n"
+            "勞保保險證號：15163631Y\n"
+            "健保代號：157155149\n"
+            "帳號：97523187\n"
+            "密碼：admin@9752"
+        )
+        await update.message.reply_text(msg, parse_mode="Markdown", reply_markup=MAIN_KEYBOARD)
+        return
+
+    if text == "🔐 退保用-健保局":
+        if update.effective_user.id != ADMIN_ID:
+            await update.message.reply_text("⛔ 無權限", reply_markup=MAIN_KEYBOARD)
+            return
+        msg = (
+            "🔐 *退保用－健保局*\n"
+            "🔗 https://eservice.nhi.gov.tw/nhiweb1/system/mLoginCa.aspx\n"
+            "─────────────────\n\n"
+            "📍 *SETV（小饅）*\n"
+            "飛耀娛樂有限公司\n"
+            "勞保字號：15170517K\n"
+            "健保字號：157501678\n\n"
+            "凱耀娛樂有限公司\n"
+            "勞保字號：15175215W\n"
+            "健保字號：157786760\n\n"
+            "─────────────────\n"
+            "📍 *智影（迪倫 E123586446）*\n"
+            "益捷資訊服務有限公司\n"
+            "勞保保險證號：15104501H\n"
+            "健保代號：153191952\n"
+            "帳號：90072433\n"
+            "密碼：admin@9007\n\n"
+            "麻酷數位有限公司\n"
+            "勞保保險證號：15163631Y\n"
+            "健保代號：157155149\n"
+            "帳號：97523187\n"
+            "密碼：admin@9752"
+        )
+        await update.message.reply_text(msg, parse_mode="Markdown", reply_markup=MAIN_KEYBOARD)
         return
 
     parts = text.replace("，"," ").split()
