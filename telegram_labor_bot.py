@@ -5,8 +5,16 @@
 """
 
 import os
+import sys
+import asyncio
 import logging
 import threading
+
+# Python 3.10+ requires explicit event loop creation
+try:
+    asyncio.get_event_loop()
+except RuntimeError:
+    asyncio.set_event_loop(asyncio.new_event_loop())
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import (
