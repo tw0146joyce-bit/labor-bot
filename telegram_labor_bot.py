@@ -121,11 +121,10 @@ def find_grade(salary):
     return len(DATA) - 1
 
 MAIN_KEYBOARD = ReplyKeyboardMarkup([
-    ["🧮 費用試算", "📋 查詢級距"],
-    ["♿ 身障補助試算", "❓ 常見問題"],
-    ["📊 費率總表", "ℹ️ 使用說明"],
+    ["🧮 費用試算", "📋 查詢級距", "♿ 身障補助"],
+    ["❓ 常見問題", "📊 費率總表", "ℹ️ 說明"],
     ["🌐 網頁版計算機"],
-    ["🔐 退保用-勞保局(三合一)", "🔐 退保用-健保局"],
+    ["🔐 退保-勞保局", "🔐 退保-健保局"],
 ], resize_keyboard=True)
 
 # 只有這個 user ID 可以使用私密按鈕
@@ -375,16 +374,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if text == "🧮 費用試算":    await calc_menu(update, context); return
     if text == "📋 查詢級距":    await grade_menu(update, context); return
-    if text == "♿ 身障補助試算": await disability_menu(update, context); return
+    if text in ["♿ 身障補助試算", "♿ 身障補助"]: await disability_menu(update, context); return
     if text == "❓ 常見問題":    await show_faq(update, context); return
     if text == "📊 費率總表":    await show_rates(update, context); return
-    if text == "ℹ️ 使用說明":    await help_cmd(update, context); return
+    if text in ["ℹ️ 使用說明", "ℹ️ 說明"]:    await help_cmd(update, context); return
     if text == "🌐 網頁版計算機":
         web_msg = "🌐 *勞健保網頁版計算機*\n\n點擊下方連結開啟網頁版，支援完整費用試算、級距查詢、身障補助計算：\n\n" + WEB_URL
         await update.message.reply_text(web_msg, parse_mode="Markdown", reply_markup=MAIN_KEYBOARD)
         return
 
-    if text == "🔐 退保用-勞保局(三合一)":
+    if text in ["🔐 退保用-勞保局(三合一)", "🔐 退保-勞保局"]:
         if update.effective_user.id != ADMIN_ID:
             await update.message.reply_text("⛔ 無權限", reply_markup=MAIN_KEYBOARD)
             return
@@ -415,7 +414,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(msg, parse_mode="Markdown", reply_markup=MAIN_KEYBOARD)
         return
 
-    if text == "🔐 退保用-健保局":
+    if text in ["🔐 退保用-健保局", "🔐 退保-健保局"]:
         if update.effective_user.id != ADMIN_ID:
             await update.message.reply_text("⛔ 無權限", reply_markup=MAIN_KEYBOARD)
             return
