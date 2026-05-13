@@ -207,24 +207,26 @@
           <tr>
             <th rowspan="2">級</th>
             <th rowspan="2">級距金額</th>
-            <th colspan="5" class="c1">公司負擔</th>
-            <th colspan="2" class="c2">員工負擔</th>
+            <th colspan="6" class="c1">公司負擔</th>
+            <th colspan="3" class="c2">員工負擔</th>
             <th rowspan="2">備註</th>
           </tr>
           <tr>
             <th class="c1">勞保</th>
             <th class="c1">災保</th>
             <th class="c1">勞+職保</th>
+            <th class="c1">健保</th>
             <th class="c1">勞退6%</th>
-            <th class="c1">公司小計</th>
+            <th class="c1">公司合計</th>
             <th class="c2">員工勞保</th>
-            <th class="c2">員工勞保+健保(本人)</th>
+            <th class="c2">員工健保</th>
+            <th class="c2">員工合計</th>
           </tr>
         </thead>
         <tbody id="tb-labor"></tbody>
       </table>
     </div>
-    <p class="note">※ 員工健保依眷屬人數不同，詳見「健保負擔金額表」標籤<br>※ 公司小計＝勞保＋災保＋勞退（不含健保，健保另計）<br>※ 黃色＝勞保最高級距，粉色＝災保最高級距，綠色＝勞退最高級距</p>
+    <p class="note">※ 員工健保依眷屬人數不同，詳見「健保負擔金額表」標籤<br>※ 公司合計＝勞保＋災保＋健保＋勞退（同PDF格式）<br>※ 黃色＝勞保最高級距，粉色＝災保最高級距，綠色＝勞退最高級距</p>
   </div>
 
   <!-- ===== 健保負擔金額表 ===== -->
@@ -723,16 +725,22 @@ function buildLaborTable() {
     else if(note==='災保最高級距') cls='hl-dis';
     else if(note==='勞退最高級距') cls='hl-pension';
     else if(note==='健保最高級距') cls='hl-health';
+    const cHealth = h[4];  // 公司健保
+    const eHealth = h[0];  // 員工健保(本人)
+    const cTotal = cLaborDis + cHealth + cPension;
+    const eTotal = eLabor + eHealth;
     tb.innerHTML += `<tr class="${cls}">
       <td>${i+1}</td>
       <td><b>${N(grade)}</b></td>
       <td>${N(cLabor)}</td>
       <td>${cDis}</td>
       <td>${N(cLaborDis)}</td>
+      <td>${N(cHealth)}</td>
       <td>${N(cPension)}</td>
-      <td><b>${N(cLaborDis+cPension)}</b></td>
+      <td><b>${N(cTotal)}</b></td>
       <td>${N(eLabor)}</td>
-      <td>${N(eLabor+h[0])}</td>
+      <td>${N(eHealth)}</td>
+      <td><b>${N(eTotal)}</b></td>
       <td style="font-size:0.72rem;color:#e65100;text-align:left">${note}</td>
     </tr>`;
   });
