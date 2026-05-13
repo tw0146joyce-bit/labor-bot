@@ -461,16 +461,7 @@ def run_health_server():
     server = HTTPServer(("0.0.0.0", port), HealthHandler)
     server.serve_forever()
 
-def main():
-    if not BOT_TOKEN:
-        print("ERROR: BOT_TOKEN not set")
-        return
-    # Start HTTP health check server in background (for Render)
-    t = threading.Thread(target=run_health_server, daemon=True)
-    t.start()
-    port = os.environ.get("PORT", "10000")
-    print("Health server started on port " + port)
-
+def run_bot():
     app = Application.builder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_cmd))
@@ -481,6 +472,19 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     print("Bot starting...")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
+
+def main():
+    if not BOT_TOKEN:
+        print("ERROR: BOT_TOKEN not set")
+        return
+    # Run bot in background thread
+    t = threading.Thread(target=run_bot, daemon=True)
+    t.start()
+    port = int(os.environ.get("PORT", 10000))
+    print("Health server started on port " + str(port))
+    # Run HTTP health server in main thread (keeps process alive)
+    server = HTTPServer(("0.0.0.0", port), HealthHandler)
+    server.serve_forever()
 
 if __name__ == "__main__":
     main()
