@@ -138,7 +138,10 @@ MAIN_KEYBOARD = ReplyKeyboardMarkup([
     ["🧮 費用試算", "📋 查詢級距"],
     ["♿ 身障補助試算", "❓ 常見問題"],
     ["📊 費率總表", "ℹ️ 使用說明"],
+    ["🌐 網頁版計算機"],
 ], resize_keyboard=True)
+
+WEB_URL = "https://tw0146joyce-bit.github.io/labor-bot/"
 
 # ===== /start =====
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -388,6 +391,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if text == "❓ 常見問題":     await show_faq(update, context); return
     if text == "📊 費率總表":     await show_rates(update, context); return
     if text == "ℹ️ 使用說明":     await help_cmd(update, context); return
+    if text == "🌐 網頁版計算機":
+        await update.message.reply_text(
+            "🌐 *勞健保網頁版計算機*
+
+點擊下方連結開啟網頁版，支援完整費用試算、級距查詢、身障補助計算：
+
+" + WEB_URL,
+            parse_mode="Markdown",
+            reply_markup=MAIN_KEYBOARD
+        )
+        return
 
     parts = text.replace("，"," ").split()
 
