@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>勞健保計算機器人 2026</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif; background: #f0f4f8; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
+  header { width: 100%; background: linear-gradient(135deg, #1a73e8, #0d47a1); color: white; padding: 20px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+  header h1 { font-size: 1.6rem; margin-bottom: 4px; }
+  header p { font-size: 0.85rem; opacity: 0.85; }
+  .badge { display: inline-block; background: #ff6d00; color: white; font-size: 0.72rem; padding: 2px 10px; border-radius: 20px; margin-top: 6px; font-weight: 700; }
+  .tabs { display: flex; gap: 6px; padding: 16px 16px 0; width: 100%; max-width: 1200px; flex-wrap: wrap; }
+  .tab { padding: 9px 16px; border: none; border-radius: 8px 8px 0 0; cursor: pointer; font-size: 0.85rem; background: #dce8fa; color: #1a73e8; font-weight: 600; transition: all 0.2s; }
+  .tab.active { background: #1a73e8; color: white; }
+  .tab:hover:not(.active) { background: #b3cfef; }
+  .container { background: white; border-radius: 0 8px 8px 8px; padding: 22px; width: 100%; max-width: 1200px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); margin-bottom: 24px; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  h2 { color: #1a73e8; margin-bottom: 14px; font-size: 1.05rem; }
+  .form-row { display: flex; gap: 14px; margin-bottom: 14px; align-items: flex-end; flex-wrap: wrap; }
+  .form-group { flex: 1; min-width: 150px; }
+  label { display: block; font-size: 0.82rem; color: #555; margin-bottom: 5px; font-weight: 600; }
+  select, input[type="number"] { width: 100%; padding: 8px 10px; border: 1.5px solid #d0d7e0; border-radius: 6px; font-size: 0.88rem; color: #333; background: #fafafa; }
+  select:focus, input:focus { border-color: #1a73e8; outline: none; background: white; }
+  .btn { padding: 9px 24px; background: #1a73e8; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.92rem; font-weight: 700; transition: background 0.2s; white-space: nowrap; }
+  .btn:hover { background: #1558b0; }
+  .result-box { background: #f0f7ff; border: 1.5px solid #b3d4f7; border-radius: 8px; padding: 16px 20px; margin-top: 16px; display: none; }
+  .result-box.show { display: block; }
+  .result-title { font-size: 0.84rem; color: #1a73e8; font-weight: 700; margin-bottom: 10px; border-bottom: 1px solid #b3d4f7; padding-bottom: 7px; }
+  .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+  .result-card { background: #f5f8ff; border: 1.5px solid #b3d4f7; border-radius: 8px; padding: 14px 16px; }
+  .result-card h3 { font-size: 0.84rem; color: #1a73e8; margin-bottom: 8px; font-weight: 700; }
+  .result-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 0.86rem; border-bottom: 1px dashed #d8eaf9; }
+  .result-row:last-child { border-bottom: none; }
+  .result-row .lbl { color: #555; }
+  .result-row .val { font-weight: 700; color: #333; }
+  .result-row.total .lbl { color: #1a73e8; font-weight: 700; }
+  .result-row.total .val { color: #d32f2f; font-size: 0.98rem; }
+  .note { font-size: 0.76rem; color: #888; margin-top: 9px; line-height: 1.7; }
+  /* 聊天 */
+  .chat-area { border: 1.5px solid #d0d7e0; border-radius: 8px; height: 360px; overflow-y: auto; padding: 12px; background: #f8f9fa; margin-bottom: 10px; }
+  .msg { margin-bottom: 10px; display: flex; gap: 8px; align-items: flex-start; }
+  .msg.user { flex-direction: row-reverse; }
+  .msg-bubble { max-width: 78%; padding: 9px 13px; border-radius: 12px; font-size: 0.86rem; line-height: 1.7; }
+  .msg.bot .msg-bubble { background: #e8f0fe; color: #222; border-radius: 4px 12px 12px 12px; }
+  .msg.user .msg-bubble { background: #1a73e8; color: white; border-radius: 12px 4px 12px 12px; }
+  .avatar { font-size: 1.3rem; flex-shrink: 0; }
+  .chat-input-row { display: flex; gap: 8px; }
+  .chat-input-row input { flex: 1; padding: 9px 13px; border: 1.5px solid #d0d7e0; border-radius: 6px; font-size: 0.88rem; }
+  .quick-btns { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 9px; }
+  .qbtn { padding: 4px 10px; background: #e8f0fe; border: 1px solid #b3d4f7; border-radius: 20px; font-size: 0.76rem; cursor: pointer; color: #1a73e8; transition: all 0.2s; }
+  .qbtn:hover { background: #1a73e8; color: white; }
+  /* 表格 */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.78rem; margin-bottom: 6px; }
+  th { background: #1a73e8; color: white; padding: 7px 6px; text-align: center; white-space: nowrap; }
+  th.c1 { background: #0d47a1; }
+  th.c2 { background: #1565c0; }
+  th.c3 { background: #1976d2; }
+  th.c4 { background: #0277bd; }
+  td { padding: 5px 6px; border-bottom: 1px solid #e8ecf0; text-align: right; white-space: nowrap; }
+  td:first-child, td:nth-child(2) { text-align: center; }
+  tr:nth-child(even) td { background: #f5f8ff; }
+  tr:hover td { background: #e3f0ff !important; }
+  tr.hl-labor td { background: #fff8e1 !important; font-weight: 700; }
+  tr.hl-dis td { background: #fce4ec !important; font-weight: 700; }
+  tr.hl-pension td { background: #e8f5e9 !important; font-weight: 700; }
+  tr.hl-health td { background: #e8eaf6 !important; font-weight: 700; }
+  .section-title { font-size: 0.98rem; color: #333; margin: 16px 0 7px; font-weight: 700; }
+  .warn-box { background: #fff8e1; border: 1.5px solid #ffe082; border-radius: 6px; padding: 9px 13px; font-size: 0.8rem; color: #795548; margin-bottom: 12px; }
+  .info-boxes { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .info-box { flex: 1; min-width: 150px; background: #e8f0fe; border-radius: 8px; padding: 10px 14px; font-size: 0.78rem; }
+  .info-box strong { display: block; font-size: 1rem; color: #1a73e8; margin-bottom: 2px; }
+  .tab-sub { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+  .tab-sub button { padding: 6px 14px; border: 1.5px solid #b3d4f7; border-radius: 20px; cursor: pointer; font-size: 0.8rem; background: white; color: #1a73e8; font-weight: 600; }
+  .tab-sub button.active { background: #1a73e8; color: white; border-color: #1a73e8; }
+  @media (max-width: 700px) { .form-row { flex-direction: column; } .result-grid { grid-template-columns: 1fr; } .tabs { padding: 10px 10px 0; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>🤖 勞健保計算機器人</h1>
+  <p>勞保 ／ 災保 ／ 健保 ／ 勞退 ／ 智慧問答</p>
+  <span class="badge">✅ 2026年（民國115年）最新費率・115.01.01起生效</span>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('calc',this)">💰 費用試算</button>
+  <button class="tab" onclick="switchTab('table-labor',this)">📋 勞保級距表</button>
+  <button class="tab" onclick="switchTab('table-health',this)">🏥 健保負擔金額表</button>
+  <button class="tab" onclick="switchTab('qa',this)">💬 智慧問答</button>
+  <button class="tab" onclick="switchTab('rates',this)">📊 費率說明</button>
+  <button class="tab" onclick="switchTab('disability',this)">♿ 身障眷屬補助試算</button>
+</div>
+
+<div class="container">
+
+  <!-- ===== 費用試算 ===== -->
+  <div id="panel-calc" class="panel active">
+    <h2>💰 費用試算（依官方PDF精確數據）</h2>
+    <div class="warn-box">⚠️ 2026年：基本工資 <b>29,500元</b>・勞保 <b>12.5%</b>・災保 <b>0.12%</b>・健保 <b>5.17%</b>・勞退雇主 <b>6%</b>・數據來自勞保局＋健保署官方文件</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>月薪資投保級距（元）</label>
+        <select id="calc-grade">
+          <option value="0">29,500（第1級・最低）</option>
+          <option value="1">30,300（第2級）</option>
+          <option value="2">31,800（第3級）</option>
+          <option value="3">33,300（第4級）</option>
+          <option value="4">34,800（第5級）</option>
+          <option value="5">36,300（第6級）</option>
+          <option value="6">38,200（第7級）</option>
+          <option value="7">40,100（第8級）</option>
+          <option value="8">42,000（第9級）</option>
+          <option value="9">43,900（第10級）</option>
+          <option value="10">45,800（第11級・勞保最高）</option>
+          <option value="11">48,200（第12級）</option>
+          <option value="12">50,600（第13級）</option>
+          <option value="13">53,000（第14級）</option>
+          <option value="14">55,400（第15級）</option>
+          <option value="15">57,800（第16級）</option>
+          <option value="16">60,800（第17級）</option>
+          <option value="17">63,800（第18級）</option>
+          <option value="18">66,800（第19級）</option>
+          <option value="19">69,800（第20級）</option>
+          <option value="20">72,800（第21級・災保最高）</option>
+          <option value="21">76,500（第22級）</option>
+          <option value="22">80,200（第23級）</option>
+          <option value="23">83,900（第24級）</option>
+          <option value="24">87,600（第25級）</option>
+          <option value="25">92,100（第26級）</option>
+          <option value="26">96,600（第27級）</option>
+          <option value="27">101,100（第28級）</option>
+          <option value="28">105,600（第29級）</option>
+          <option value="29">110,100（第30級）</option>
+          <option value="30">115,500（第31級）</option>
+          <option value="31">120,900（第32級）</option>
+          <option value="32">126,300（第33級）</option>
+          <option value="33">131,700（第34級）</option>
+          <option value="34">137,100（第35級）</option>
+          <option value="35">142,500（第36級）</option>
+          <option value="36">147,900（第37級）</option>
+          <option value="37">150,000（第38級・勞退最高）</option>
+          <option value="38">156,400（第39級）</option>
+          <option value="39">162,800（第40級）</option>
+          <option value="40">169,200（第41級）</option>
+          <option value="41">175,600（第42級）</option>
+          <option value="42">182,000（第43級）</option>
+          <option value="43">189,500（第44級）</option>
+          <option value="44">197,000（第45級）</option>
+          <option value="45">204,500（第46級）</option>
+          <option value="46">212,000（第47級）</option>
+          <option value="47">219,500（第48級）</option>
+          <option value="48">228,200（第49級）</option>
+          <option value="49">236,900（第50級）</option>
+          <option value="50">245,600（第51級）</option>
+          <option value="51">254,300（第52級）</option>
+          <option value="52">263,000（第53級）</option>
+          <option value="53">273,000（第54級）</option>
+          <option value="54">283,000（第55級）</option>
+          <option value="55">293,000（第56級）</option>
+          <option value="56">303,000（第57級）</option>
+          <option value="57">313,000（第58級・健保最高）</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>眷屬人數（含本人共幾人）</label>
+        <select id="calc-dep">
+          <option value="0">1人（本人，無眷屬）</option>
+          <option value="1">2人（本人＋1眷口）</option>
+          <option value="2">3人（本人＋2眷口）</option>
+          <option value="3">4人以上（本人＋3眷口，上限）</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>勞工自提勞退（0~6%）</label>
+        <select id="calc-self">
+          <option value="0">0%（不自提）</option>
+          <option value="1">1%</option>
+          <option value="2">2%</option>
+          <option value="3">3%</option>
+          <option value="4">4%</option>
+          <option value="5">5%</option>
+          <option value="6">6%（節稅最大）</option>
+        </select>
+      </div>
+      <div class="form-group" style="flex:0">
+        <button class="btn" onclick="calcAll()">計　算</button>
+      </div>
+    </div>
+    <div class="result-box" id="result-all"></div>
+  </div>
+
+  <!-- ===== 勞保＋災保＋勞退級距表 ===== -->
+  <div id="panel-table-labor" class="panel">
+    <h2>📋 2026年勞保／災保／勞退級距對照表（共58級）</h2>
+    <div class="info-boxes">
+      <div class="info-box">🛡️ 勞保最高級距<strong>45,800元</strong>第11級後固定4,008元</div>
+      <div class="info-box">⚙️ 災保最高級距<strong>72,800元</strong>第21級後固定87元</div>
+      <div class="info-box">💰 勞退最高級距<strong>150,000元</strong>第38級後固定9,000元</div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th rowspan="2">級</th>
+            <th rowspan="2">級距金額</th>
+            <th colspan="5" class="c1">公司負擔</th>
+            <th colspan="2" class="c2">員工負擔</th>
+            <th rowspan="2">備註</th>
+          </tr>
+          <tr>
+            <th class="c1">勞保</th>
+            <th class="c1">災保</th>
+            <th class="c1">勞+職保</th>
+            <th class="c1">勞退6%</th>
+            <th class="c1">公司小計</th>
+            <th class="c2">員工勞保</th>
+            <th class="c2">員工勞保+健保(本人)</th>
+          </tr>
+        </thead>
+        <tbody id="tb-labor"></tbody>
+      </table>
+    </div>
+    <p class="note">※ 員工健保依眷屬人數不同，詳見「健保負擔金額表」標籤<br>※ 公司小計＝勞保＋災保＋勞退（不含健保，健保另計）<br>※ 黃色＝勞保最高級距，粉色＝災保最高級距，綠色＝勞退最高級距</p>
+  </div>
+
+  <!-- ===== 健保負擔金額表 ===== -->
+  <div id="panel-table-health" class="panel">
+    <h2>🏥 2026年全民健保保險費負擔金額表（公、民營事業・115.1.1生效）</h2>
+    <div class="info-boxes">
+      <div class="info-box">健保費率<strong>5.17%</strong>自110年起</div>
+      <div class="info-box">個人負擔<strong>30%</strong>眷屬同比例</div>
+      <div class="info-box">雇主負擔<strong>60%</strong>含平均眷口0.56人</div>
+      <div class="info-box">政府補助<strong>10%</strong></div>
+    </div>
+    <div class="tab-sub">
+      <button class="active" onclick="showHealthView('all',this)">完整對照表</button>
+      <button onclick="showHealthView('person',this)">依眷屬人數查詢</button>
+    </div>
+    <div id="health-view-all">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th rowspan="2">級</th>
+              <th rowspan="2">月投保金額</th>
+              <th colspan="4" class="c3">被保險人及眷屬負擔金額（30%）</th>
+              <th class="c1">投保單位負擔</th>
+              <th class="c4">政府補助</th>
+            </tr>
+            <tr>
+              <th class="c3">本人</th>
+              <th class="c3">本人＋1眷口</th>
+              <th class="c3">本人＋2眷口</th>
+              <th class="c3">本人＋3眷口</th>
+              <th class="c1">（60%）</th>
+              <th class="c4">（10%）</th>
+            </tr>
+          </thead>
+          <tbody id="tb-health-all"></tbody>
+        </table>
+      </div>
+      <p class="note">※ 自115年1月1日起，第一級調整為29,500元；最高一級為313,000元<br>※ 投保單位負擔金額含本人及平均眷屬0.56人（合計1.56人）計算</p>
+    </div>
+    <div id="health-view-person" style="display:none">
+      <div class="form-row" style="max-width:400px">
+        <div class="form-group">
+          <label>選擇眷屬人數</label>
+          <select id="dep-filter" onchange="filterHealth()">
+            <option value="0">本人（無眷屬）</option>
+            <option value="1">本人＋1眷口</option>
+            <option value="2">本人＋2眷口</option>
+            <option value="3">本人＋3眷口</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>級</th>
+              <th>月投保金額</th>
+              <th class="c3">員工負擔金額</th>
+              <th class="c1">雇主負擔（60%）</th>
+              <th class="c4">政府補助（10%）</th>
+            </tr>
+          </thead>
+          <tbody id="tb-health-person"></tbody>
+        </table>
+      </div>
+      <p class="note">※ 雇主負擔金額含平均眷口數0.56人，與員工選擇眷屬人數無關</p>
+    </div>
+  </div>
+
+  <!-- ===== 智慧問答 ===== -->
+  <div id="panel-qa" class="panel">
+    <h2>💬 智慧問答機器人</h2>
+    <div class="quick-btns">
+      <button class="qbtn" onclick="askQ('2026年勞保費率是多少？')">勞保費率？</button>
+      <button class="qbtn" onclick="askQ('災保費率是多少？')">災保費率？</button>
+      <button class="qbtn" onclick="askQ('2026年健保費率是多少？')">健保費率？</button>
+      <button class="qbtn" onclick="askQ('勞退雇主要提撥多少？')">勞退提撥？</button>
+      <button class="qbtn" onclick="askQ('基本工資是多少？')">2026基本工資？</button>
+      <button class="qbtn" onclick="askQ('眷屬可以加健保嗎？')">眷屬加保？</button>
+      <button class="qbtn" onclick="askQ('勞工自提勞退有稅務優惠嗎？')">自提節稅？</button>
+      <button class="qbtn" onclick="askQ('二代健保補充費是什麼？')">二代健保？</button>
+      <button class="qbtn" onclick="askQ('新進員工幾天內要加保？')">新人加保期限？</button>
+      <button class="qbtn" onclick="askQ('投保薪資怎麼申報？')">投保薪資申報？</button>
+    </div>
+    <div class="chat-area" id="chat-area">
+      <div class="msg bot">
+        <span class="avatar">🤖</span>
+        <div class="msg-bubble">您好！我是<b>2026年勞健保計算機器人</b> 😊<br>資料來源：勞保局＋健保署官方文件，數據100%精確！<br>可點擊快速問題，或直接輸入內容。</div>
+      </div>
+    </div>
+    <div class="chat-input-row">
+      <input type="text" id="chat-input" placeholder="請輸入問題…" onkeydown="if(event.key==='Enter')sendChat()">
+      <button class="btn" onclick="sendChat()">送出</button>
+    </div>
+  </div>
+
+  <!-- ===== 費率說明 ===== -->
+  <div id="panel-rates" class="panel">
+    <h2>📊 2026年費率說明</h2>
+    <div class="section-title">🛡️ 勞工保險費率 12.5%</div>
+    <table>
+      <tr><th>險種</th><th>費率</th><th>勞工負擔</th><th>雇主負擔</th><th>政府負擔</th></tr>
+      <tr><td>普通事故保險</td><td>11.5%</td><td>20%</td><td>70%</td><td>10%</td></tr>
+      <tr><td>就業保險</td><td>1%</td><td>20%</td><td>70%</td><td>10%</td></tr>
+      <tr><td><b>合計（受雇勞工）</b></td><td><b>12.5%</b></td><td><b>20%（2.5%）</b></td><td><b>70%（8.75%）</b></td><td><b>10%（1.25%）</b></td></tr>
+    </table>
+    <p class="note">※ 勞保最高投保級距：45,800元（第11級），超過此級距勞工仍固定負擔1,145元</p>
+    <div class="section-title">⚙️ 職業災害保險費率 0.12%</div>
+    <table>
+      <tr><th>費率</th><th>負擔方</th><th>最高級距</th></tr>
+      <tr><td>0.12%</td><td>雇主全額負擔（勞工不需負擔）</td><td>72,800元（第21級），超過後固定87元</td></tr>
+    </table>
+    <div class="section-title">🏥 全民健康保險費率 5.17%（公、民營事業）</div>
+    <table>
+      <tr><th>對象</th><th>費率</th><th>負擔比率</th><th>說明</th></tr>
+      <tr><td>被保險人（本人）</td><td>5.17%</td><td>30%</td><td>依月投保金額×5.17%×30%</td></tr>
+      <tr><td>眷屬每加1口</td><td>5.17%</td><td>30%</td><td>每多1口多計1份30%，最多3口</td></tr>
+      <tr><td>投保單位（雇主）</td><td>5.17%</td><td>60%</td><td>含平均眷口數0.56人，合計1.56人計算</td></tr>
+      <tr><td>政府補助</td><td>5.17%</td><td>10%</td><td>直接撥付，勞工及雇主不需額外負擔</td></tr>
+    </table>
+    <p class="note">※ 健保最低投保金額 29,500元，最高 313,000元（共58級）</p>
+    <div class="section-title">💰 勞工退休金提撥率</div>
+    <table>
+      <tr><th>項目</th><th>比率</th><th>說明</th></tr>
+      <tr><td>雇主提撥</td><td>6%（強制）</td><td>月提撥工資上限150,000元，超過後固定9,000元</td></tr>
+      <tr><td>勞工自提</td><td>0～6%（自選）</td><td>自提全額從綜合所得稅扣除，不計入薪資</td></tr>
+    </table>
+    <div class="section-title">📌 二代健保補充保費 2.11%</div>
+    <table>
+      <tr><th>項目</th><th>扣繳方式</th></tr>
+      <tr><td>獎金單次超過當月投保金額4倍</td><td>超出部分 × 2.11%，由公司代扣</td></tr>
+      <tr><td>兼職收入超過基本工資（29,500元）</td><td>超出部分 × 2.11%</td></tr>
+      <tr><td>股利、利息、租金（年度累計超2萬）</td><td>超出部分 × 2.11%</td></tr>
+    </table>
+    <div class="section-title">📅 2026年基本工資</div>
+    <table>
+      <tr><th>項目</th><th>2026年</th><th>較2025年</th></tr>
+      <tr><td>月薪基本工資</td><td><b>29,500元</b></td><td>↑ 多2,030元</td></tr>
+      <tr><td>時薪基本工資</td><td><b>196元</b></td><td>↑ 多13元</td></tr>
+    </table>
+  </div>
+
+
+  <!-- ===== 身障眷屬補助試算 ===== -->
+  <div id="panel-disability" class="panel">
+    <h2>♿ 身障眷屬健保補助標準及試算</h2>
+    <div class="warn-box">
+      📋 依《全民健康保險法》第27條，身心障礙者眷屬保費由政府補助部分保費。<br>
+      資料來源：<a href="https://www.bli.gov.tw/0005481.html" target="_blank" style="color:#1a73e8">勞保局官方說明頁</a>
+    </div>
+
+    <!-- 補助標準說明 -->
+    <div class="section-title">📌 補助標準（健保眷屬30%負擔部分）</div>
+    <table>
+      <tr><th>身障等級</th><th>政府補助比例</th><th>眷屬自付比例</th><th>說明</th></tr>
+      <tr><td>極重度／重度身障</td><td style="color:#d32f2f;font-weight:700">1/2（50%）</td><td>50%</td><td>需持有有效身心障礙手冊（極重度或重度）</td></tr>
+      <tr><td>中度身障</td><td style="color:#e65100;font-weight:700">1/3（約33.3%）</td><td>約66.7%</td><td>需持有有效身心障礙手冊（中度）</td></tr>
+      <tr><td>輕度身障</td><td style="color:#f9a825;font-weight:700">1/4（25%）</td><td>75%</td><td>需持有有效身心障礙手冊（輕度）</td></tr>
+      <tr><td>無身障</td><td>無補助</td><td>100%</td><td>依一般健保費率全額自付</td></tr>
+    </table>
+    <p class="note">※ 補助對象為「眷屬」持有身障手冊者；被保險人本人身障另有規定<br>※ 需向投保單位（公司）申報眷屬身障手冊，由公司向健保署申請補助</p>
+
+    <!-- 試算工具 -->
+    <div class="section-title" style="margin-top:20px">🧮 互動試算：自訂每位眷屬身障等級</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>被保險人月投保金額</label>
+        <select id="dis-grade">
+          <option value="0">29,500（第1級）</option>
+          <option value="1">30,300（第2級）</option>
+          <option value="2">31,800（第3級）</option>
+          <option value="3">33,300（第4級）</option>
+          <option value="4">34,800（第5級）</option>
+          <option value="5">36,300（第6級）</option>
+          <option value="6">38,200（第7級）</option>
+          <option value="7">40,100（第8級）</option>
+          <option value="8">42,000（第9級）</option>
+          <option value="9">43,900（第10級）</option>
+          <option value="10">45,800（第11級）</option>
+          <option value="11">48,200（第12級）</option>
+          <option value="12">50,600（第13級）</option>
+          <option value="13">53,000（第14級）</option>
+          <option value="14">55,400（第15級）</option>
+          <option value="15">57,800（第16級）</option>
+          <option value="16">60,800（第17級）</option>
+          <option value="17">63,800（第18級）</option>
+          <option value="18">66,800（第19級）</option>
+          <option value="19">69,800（第20級）</option>
+          <option value="20">72,800（第21級）</option>
+          <option value="21">76,500（第22級）</option>
+          <option value="22">80,200（第23級）</option>
+          <option value="23">83,900（第24級）</option>
+          <option value="24">87,600（第25級）</option>
+          <option value="25">92,100（第26級）</option>
+          <option value="26">96,600（第27級）</option>
+          <option value="27">101,100（第28級）</option>
+          <option value="28">105,600（第29級）</option>
+          <option value="29">110,100（第30級）</option>
+          <option value="30">115,500（第31級）</option>
+          <option value="31">120,900（第32級）</option>
+          <option value="32">126,300（第33級）</option>
+          <option value="33">131,700（第34級）</option>
+          <option value="34">137,100（第35級）</option>
+          <option value="35">142,500（第36級）</option>
+          <option value="36">147,900（第37級）</option>
+          <option value="37">150,000（第38級）</option>
+          <option value="38">156,400（第39級）</option>
+          <option value="39">162,800（第40級）</option>
+          <option value="40">169,200（第41級）</option>
+          <option value="41">175,600（第42級）</option>
+          <option value="42">182,000（第43級）</option>
+          <option value="43">189,500（第44級）</option>
+          <option value="44">197,000（第45級）</option>
+          <option value="45">204,500（第46級）</option>
+          <option value="46">212,000（第47級）</option>
+          <option value="47">219,500（第48級）</option>
+          <option value="48">228,200（第49級）</option>
+          <option value="49">236,900（第50級）</option>
+          <option value="50">245,600（第51級）</option>
+          <option value="51">254,300（第52級）</option>
+          <option value="52">263,000（第53級）</option>
+          <option value="53">273,000（第54級）</option>
+          <option value="54">283,000（第55級）</option>
+          <option value="55">293,000（第56級）</option>
+          <option value="56">303,000（第57級）</option>
+          <option value="57">313,000（第58級）</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>眷屬人數（最多3人）</label>
+        <select id="dis-depcount" onchange="updateDepRows()">
+          <option value="0">0人（無眷屬）</option>
+          <option value="1">1人</option>
+          <option value="2">2人</option>
+          <option value="3">3人</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 動態眷屬身障等級設定 -->
+    <div id="dep-rows" style="display:none; margin-bottom:14px;">
+      <div style="font-size:0.82rem;font-weight:700;color:#555;margin-bottom:8px;">設定每位眷屬的身障等級：</div>
+      <div id="dep-row-1" class="form-row" style="display:none">
+        <div class="form-group"><label>眷屬1</label>
+          <select id="dep-dis-1">
+            <option value="none">無身障（自付100%）</option>
+            <option value="light">輕度身障（政府補助1/4）</option>
+            <option value="moderate">中度身障（政府補助1/3）</option>
+            <option value="severe">重度／極重度身障（政府補助1/2）</option>
+          </select>
+        </div>
+      </div>
+      <div id="dep-row-2" class="form-row" style="display:none">
+        <div class="form-group"><label>眷屬2</label>
+          <select id="dep-dis-2">
+            <option value="none">無身障（自付100%）</option>
+            <option value="light">輕度身障（政府補助1/4）</option>
+            <option value="moderate">中度身障（政府補助1/3）</option>
+            <option value="severe">重度／極重度身障（政府補助1/2）</option>
+          </select>
+        </div>
+      </div>
+      <div id="dep-row-3" class="form-row" style="display:none">
+        <div class="form-group"><label>眷屬3</label>
+          <select id="dep-dis-3">
+            <option value="none">無身障（自付100%）</option>
+            <option value="light">輕度身障（政府補助1/4）</option>
+            <option value="moderate">中度身障（政府補助1/3）</option>
+            <option value="severe">重度／極重度身障（政府補助1/2）</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn" onclick="calcDisability()">計　算</button>
+    <div class="result-box" id="result-disability"></div>
+
+    <!-- 範例說明 -->
+    <div class="section-title" style="margin-top:24px">📖 計算範例（依官方邏輯）</div>
+    <div style="background:#f5f8ff;border:1.5px solid #b3d4f7;border-radius:8px;padding:16px 18px;font-size:0.84rem;line-height:1.9;">
+      <b>情境：</b>小安投保金額 45,800元，眷屬3人：太太（輕度身障）、兒子（無）、女兒（無）<br><br>
+      <b>步驟1</b>　單名眷屬保費基數：<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;45,800 × 5.17% × 30% ＝ <b>710元</b><br><br>
+      <b>步驟2</b>　各眷屬實際自付：<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;太太（輕度，補助1/4）：710 × 75% ＝ 532.5 → <b>533元</b><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;兒子（無身障）：<b>710元</b><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;女兒（無身障）：<b>710元</b><br><br>
+      <b>步驟3</b>　小安本人保費 + 三位眷屬合計：<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;本人：<b>710元</b>　＋　眷屬：533＋710＋710 ＝ 1,953元<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;👉 小安每月健保費共：710 ＋ 1,953 ＝ <b style="color:#d32f2f;font-size:1rem">2,663元</b><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;（若三位眷屬皆無身障，原本為710 × 4 ＝ 2,840元，<b>節省 177元/月</b>）
+    </div>
+    <p class="note" style="margin-top:10px">※ 四捨五入方式：每位眷屬補助後金額各別四捨五入至整數元<br>
+    ※ 申辦方式：向公司人資申報，備妥身障手冊影本，由公司向健保署申請<br>
+    ※ 資料來源：<a href="https://www.bli.gov.tw/0005481.html" target="_blank" style="color:#1a73e8">勞動部勞工保險局</a></p>
+  </div>
+
+</div>
+
+<script>
+// ===== 完整數據（依兩份PDF） =====
+// DATA: [級距, 公司勞保, 公司災保, 公司勞+職, 公司勞退, 員工勞保, 備註]
+// 健保欄位獨立存放在 HEALTH_DATA
+const DATA = [
+  [29500,  2582,35,2617,1770, 738, '健保最低級距'],
+  [30300,  2651,36,2687,1818, 758, ''],
+  [31800,  2783,38,2821,1908, 795, ''],
+  [33300,  2914,40,2954,1998, 833, ''],
+  [34800,  3045,42,3087,2088, 870, ''],
+  [36300,  3176,44,3220,2178, 908, ''],
+  [38200,  3342,46,3388,2292, 955, ''],
+  [40100,  3509,48,3557,2406,1002, ''],
+  [42000,  3675,50,3725,2520,1050, ''],
+  [43900,  3841,53,3894,2634,1098, ''],
+  [45800,  4008,55,4063,2748,1145, '勞保最高級距'],
+  [48200,  4008,58,4066,2892,1145, ''],
+  [50600,  4008,61,4069,3036,1145, ''],
+  [53000,  4008,64,4072,3180,1145, ''],
+  [55400,  4008,66,4074,3324,1145, ''],
+  [57800,  4008,69,4077,3468,1145, ''],
+  [60800,  4008,73,4081,3648,1145, ''],
+  [63800,  4008,77,4085,3828,1145, ''],
+  [66800,  4008,80,4088,4008,1145, ''],
+  [69800,  4008,84,4092,4188,1145, ''],
+  [72800,  4008,87,4095,4368,1145, '災保最高級距'],
+  [76500,  4008,87,4095,4590,1145, ''],
+  [80200,  4008,87,4095,4812,1145, ''],
+  [83900,  4008,87,4095,5034,1145, ''],
+  [87600,  4008,87,4095,5256,1145, ''],
+  [92100,  4008,87,4095,5526,1145, ''],
+  [96600,  4008,87,4095,5796,1145, ''],
+  [101100, 4008,87,4095,6066,1145, ''],
+  [105600, 4008,87,4095,6336,1145, ''],
+  [110100, 4008,87,4095,6606,1145, ''],
+  [115500, 4008,87,4095,6930,1145, ''],
+  [120900, 4008,87,4095,7254,1145, ''],
+  [126300, 4008,87,4095,7578,1145, ''],
+  [131700, 4008,87,4095,7902,1145, ''],
+  [137100, 4008,87,4095,8226,1145, ''],
+  [142500, 4008,87,4095,8550,1145, ''],
+  [147900, 4008,87,4095,8874,1145, ''],
+  [150000, 4008,87,4095,9000,1145, '勞退最高級距'],
+  [156400, 4008,87,4095,9000,1145, ''],
+  [162800, 4008,87,4095,9000,1145, ''],
+  [169200, 4008,87,4095,9000,1145, ''],
+  [175600, 4008,87,4095,9000,1145, ''],
+  [182000, 4008,87,4095,9000,1145, ''],
+  [189500, 4008,87,4095,9000,1145, ''],
+  [197000, 4008,87,4095,9000,1145, ''],
+  [204500, 4008,87,4095,9000,1145, ''],
+  [212000, 4008,87,4095,9000,1145, ''],
+  [219500, 4008,87,4095,9000,1145, ''],
+  [228200, 4008,87,4095,9000,1145, ''],
+  [236900, 4008,87,4095,9000,1145, ''],
+  [245600, 4008,87,4095,9000,1145, ''],
+  [254300, 4008,87,4095,9000,1145, ''],
+  [263000, 4008,87,4095,9000,1145, ''],
+  [273000, 4008,87,4095,9000,1145, ''],
+  [283000, 4008,87,4095,9000,1145, ''],
+  [293000, 4008,87,4095,9000,1145, ''],
+  [303000, 4008,87,4095,9000,1145, ''],
+  [313000, 4008,87,4095,9000,1145, '健保最高級距'],
+];
+
+// 健保數據：[本人, +1眷, +2眷, +3眷, 雇主(60%), 政府(10%)]
+const HEALTH = [
+  [458,916,1374,1832,1428,238],
+  [470,940,1410,1880,1466,244],
+  [493,986,1479,1972,1539,256],
+  [516,1032,1548,2064,1611,269],
+  [540,1080,1620,2160,1684,281],
+  [563,1126,1689,2252,1757,293],
+  [592,1184,1776,2368,1849,308],
+  [622,1244,1866,2488,1940,323],
+  [651,1302,1953,2604,2032,339],
+  [681,1362,2043,2724,2124,354],
+  [710,1420,2130,2840,2216,369],
+  [748,1496,2244,2992,2332,389],
+  [785,1570,2355,3140,2449,408],
+  [822,1644,2466,3288,2565,427],
+  [859,1718,2577,3436,2681,447],
+  [896,1792,2688,3584,2797,466],
+  [943,1886,2829,3772,2942,490],
+  [990,1980,2970,3960,3087,515],
+  [1036,2072,3108,4144,3233,539],
+  [1083,2166,3249,4332,3378,563],
+  [1129,2258,3387,4516,3523,587],
+  [1187,2374,3561,4748,3702,617],
+  [1244,2488,3732,4976,3881,647],
+  [1301,2602,3903,5204,4060,677],
+  [1359,2718,4077,5436,4239,707],
+  [1428,2856,4284,5712,4457,743],
+  [1498,2996,4494,5992,4675,779],
+  [1568,3136,4704,6272,4892,815],
+  [1638,3276,4914,6552,5110,852],
+  [1708,3416,5124,6832,5328,888],
+  [1791,3582,5373,7164,5589,932],
+  [1875,3750,5625,7500,5850,975],
+  [1959,3918,5877,7836,6112,1019],
+  [2043,4086,6129,8172,6373,1062],
+  [2126,4252,6378,8504,6634,1106],
+  [2210,4420,6630,8840,6896,1149],
+  [2294,4588,6882,9176,7157,1193],
+  [2327,4654,6981,9308,7259,1210],
+  [2426,4852,7278,9704,7568,1261],
+  [2525,5050,7575,10100,7878,1313],
+  [2624,5248,7872,10496,8188,1365],
+  [2724,5448,8172,10896,8497,1416],
+  [2823,5646,8469,11292,8807,1468],
+  [2939,5878,8817,11756,9170,1528],
+  [3055,6110,9165,12220,9533,1589],
+  [3172,6344,9516,12688,9896,1649],
+  [3288,6576,9864,13152,10259,1710],
+  [3404,6808,10212,13616,10622,1770],
+  [3539,7078,10617,14156,11043,1840],
+  [3674,7348,11022,14696,11464,1911],
+  [3809,7618,11427,15236,11885,1981],
+  [3944,7888,11832,15776,12306,2051],
+  [4079,8158,12237,16316,12727,2121],
+  [4234,8468,12702,16936,13211,2202],
+  [4389,8778,13167,17556,13695,2282],
+  [4544,9088,13632,18176,14179,2363],
+  [4700,9400,14100,18800,14663,2444],
+  [4855,9710,14565,19420,15146,2524],
+];
+
+function N(n){ return n.toLocaleString(); }
+
+// ===== 身障補助比例 =====
+const DIS_SUBSIDY = { none:0, light:0.25, moderate:1/3, severe:0.5 };
+const DIS_LABEL   = { none:'無身障', light:'輕度身障（補助1/4）', moderate:'中度身障（補助1/3）', severe:'重度／極重度（補助1/2）' };
+
+function updateDepRows() {
+  const cnt = parseInt(document.getElementById('dis-depcount').value);
+  document.getElementById('dep-rows').style.display = cnt > 0 ? 'block' : 'none';
+  for(let i=1;i<=3;i++){
+    document.getElementById('dep-row-'+i).style.display = i<=cnt ? 'flex' : 'none';
+  }
+}
+
+function calcDisability() {
+  const idx  = parseInt(document.getElementById('dis-grade').value);
+  const cnt  = parseInt(document.getElementById('dis-depcount').value);
+  const grade = DATA[idx][0];
+  const h     = HEALTH[idx];
+  // 本人健保費（30%）
+  const selfFee = h[0];
+  // 單名眷屬基數（同本人）
+  const depBase = h[0];
+
+  let rows = '';
+  let depTotal = 0;
+  let origDepTotal = 0;
+
+  for(let i=1;i<=cnt;i++){
+    const level = document.getElementById('dep-dis-'+i)?.value || 'none';
+    const subsidy = DIS_SUBSIDY[level];
+    const afterSubsidy = Math.round(depBase * (1 - subsidy));
+    const saved = depBase - afterSubsidy;
+    depTotal += afterSubsidy;
+    origDepTotal += depBase;
+    rows += `<div class="result-row">
+      <span class="lbl">眷屬${i}　${DIS_LABEL[level]}</span>
+      <span class="val">${N(depBase)}元 × ${Math.round((1-subsidy)*100)}% ＝ <b style="color:#d32f2f">${N(afterSubsidy)} 元</b>${saved>0?`　<span style="color:#2e7d32;font-size:0.75rem">（省 ${saved} 元）</span>`:''}</span>
+    </div>`;
+  }
+
+  const grandTotal = selfFee + depTotal;
+  const origTotal  = selfFee + origDepTotal;
+  const totalSaved = origTotal - grandTotal;
+
+  const box = document.getElementById('result-disability');
+  box.innerHTML = `
+    <div class="result-title">📊 身障眷屬健保費試算・投保金額 ${N(grade)} 元 ／ 眷屬 ${cnt} 人</div>
+    <div class="result-row"><span class="lbl">被保險人本人健保費（30%）</span><span class="val">${N(selfFee)} 元</span></div>
+    <div class="result-row" style="font-size:0.78rem;color:#888"><span class="lbl">眷屬每人基數（30%）</span><span class="val">${N(depBase)} 元/人</span></div>
+    ${rows}
+    <div class="result-row" style="border-top:1.5px solid #b3d4f7;margin-top:6px;padding-top:8px"><span class="lbl">眷屬保費合計</span><span class="val">${N(depTotal)} 元</span></div>
+    <div class="result-row total"><span class="lbl">💸 本人＋眷屬合計每月繳納</span><span class="val">${N(grandTotal)} 元</span></div>
+    ${totalSaved>0?`<div class="result-row"><span class="lbl" style="color:#2e7d32">✅ 較一般身份每月節省</span><span class="val" style="color:#2e7d32;font-weight:700">${N(totalSaved)} 元（年節省 ${N(totalSaved*12)} 元）</span></div>`:''}
+    <p class="note">※ 各眷屬金額分別四捨五入至整數元<br>※ 計算公式：月投保金額 × 5.17% × 30% × （1－補助比例）<br>※ 需向公司人資申報身障手冊，由公司向健保署申請補助</p>`;
+  box.classList.add('show');
+}
+
+// ===== 建立勞保表 =====
+function buildLaborTable() {
+  const tb = document.getElementById('tb-labor');
+  DATA.forEach((row,i) => {
+    const [grade,cLabor,cDis,cLaborDis,cPension,eLabor,note] = row;
+    const h = HEALTH[i];
+    const cHealthTotal = h[4];
+    const cGrandTotal = cLaborDis + cPension + cHealthTotal;
+    let cls = '';
+    if(note==='勞保最高級距') cls='hl-labor';
+    else if(note==='災保最高級距') cls='hl-dis';
+    else if(note==='勞退最高級距') cls='hl-pension';
+    else if(note==='健保最高級距') cls='hl-health';
+    tb.innerHTML += `<tr class="${cls}">
+      <td>${i+1}</td>
+      <td><b>${N(grade)}</b></td>
+      <td>${N(cLabor)}</td>
+      <td>${cDis}</td>
+      <td>${N(cLaborDis)}</td>
+      <td>${N(cPension)}</td>
+      <td><b>${N(cLaborDis+cPension)}</b></td>
+      <td>${N(eLabor)}</td>
+      <td>${N(eLabor+h[0])}</td>
+      <td style="font-size:0.72rem;color:#e65100;text-align:left">${note}</td>
+    </tr>`;
+  });
+}
+
+// ===== 建立健保完整表 =====
+function buildHealthTable() {
+  const tb = document.getElementById('tb-health-all');
+  DATA.forEach((row,i) => {
+    const grade = row[0];
+    const note = row[6];
+    const h = HEALTH[i];
+    let cls = '';
+    if(note==='健保最低級距'||note==='健保最高級距') cls='hl-health';
+    tb.innerHTML += `<tr class="${cls}">
+      <td>${i+1}</td>
+      <td><b>${N(grade)}</b></td>
+      <td>${N(h[0])}</td>
+      <td>${N(h[1])}</td>
+      <td>${N(h[2])}</td>
+      <td>${N(h[3])}</td>
+      <td>${N(h[4])}</td>
+      <td>${N(h[5])}</td>
+    </tr>`;
+  });
+  filterHealth();
+}
+
+function filterHealth() {
+  const dep = parseInt(document.getElementById('dep-filter').value);
+  const labels = ['本人（無眷屬）','本人＋1眷口','本人＋2眷口','本人＋3眷口'];
+  const tb = document.getElementById('tb-health-person');
+  tb.innerHTML = '';
+  DATA.forEach((row,i) => {
+    const grade = row[0];
+    const h = HEALTH[i];
+    tb.innerHTML += `<tr>
+      <td>${i+1}</td>
+      <td><b>${N(grade)}</b></td>
+      <td style="color:#d32f2f;font-weight:700">${N(h[dep])}</td>
+      <td>${N(h[4])}</td>
+      <td>${N(h[5])}</td>
+    </tr>`;
+  });
+}
+
+function showHealthView(view, el) {
+  document.getElementById('health-view-all').style.display = view==='all'?'block':'none';
+  document.getElementById('health-view-person').style.display = view==='person'?'block':'none';
+  document.querySelectorAll('.tab-sub button').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  if(view==='person') filterHealth();
+}
+
+buildLaborTable();
+buildHealthTable();
+
+// ===== 費用試算 =====
+function calcAll() {
+  const idx = parseInt(document.getElementById('calc-grade').value);
+  const dep = parseInt(document.getElementById('calc-dep').value);
+  const selfPct = parseInt(document.getElementById('calc-self').value);
+  const row = DATA[idx];
+  const [grade,cLabor,cDis,cLaborDis,cPension,eLabor,note] = row;
+  const h = HEALTH[idx];
+  const eHealth = h[dep];          // 員工健保（依眷屬）
+  const cHealth = h[4];            // 雇主健保
+  const cGovHealth = h[5];         // 政府健保補助
+  const cTotal = cLaborDis + cPension + cHealth;
+  const depLabels = ['本人','本人＋1眷口','本人＋2眷口','本人＋3眷口'];
+  // 勞工自提
+  const selfBase = Math.min(grade, 150000);
+  const selfAmt = Math.round(selfBase * selfPct / 100);
+  const eTotal = eLabor + eHealth + selfAmt;
+
+  const box = document.getElementById('result-all');
+  box.innerHTML = `
+    <div class="result-title">📊 第${idx+1}級・${N(grade)}元 ／ ${depLabels[dep]} ／ 自提${selfPct}%${note?' ・'+note:''}</div>
+    <div class="result-grid">
+      <div class="result-card">
+        <h3>🏢 公司每月負擔</h3>
+        <div class="result-row"><span class="lbl">勞保（含就保）</span><span class="val">${N(cLabor)} 元</span></div>
+        <div class="result-row"><span class="lbl">職業災害保險（0.12%）</span><span class="val">${cDis} 元</span></div>
+        <div class="result-row"><span class="lbl">勞保＋災保小計</span><span class="val">${N(cLaborDis)} 元</span></div>
+        <div class="result-row"><span class="lbl">健保（60%・含平均眷口）</span><span class="val">${N(cHealth)} 元</span></div>
+        <div class="result-row"><span class="lbl">勞退提撥（6%）</span><span class="val">${N(cPension)} 元</span></div>
+        <div class="result-row total"><span class="lbl">💰 公司合計</span><span class="val">${N(cTotal)} 元</span></div>
+        <div class="result-row" style="font-size:0.75rem"><span class="lbl" style="color:#888">＋政府補助健保（10%）</span><span class="val" style="color:#888">${N(cGovHealth)} 元</span></div>
+      </div>
+      <div class="result-card">
+        <h3>👤 員工每月負擔</h3>
+        <div class="result-row"><span class="lbl">勞保（20%）</span><span class="val">${N(eLabor)} 元</span></div>
+        <div class="result-row"><span class="lbl">健保（30%・${depLabels[dep]}）</span><span class="val">${N(eHealth)} 元</span></div>
+        <div class="result-row"><span class="lbl">勞退自提（${selfPct}%）</span><span class="val">${N(selfAmt)} 元</span></div>
+        <div class="result-row total"><span class="lbl">💸 員工每月合計扣繳</span><span class="val">${N(eTotal)} 元</span></div>
+        ${selfPct>0?`<div class="result-row"><span class="lbl" style="color:#2e7d32">✅ 年度自提節稅（×12）</span><span class="val" style="color:#2e7d32">${N(selfAmt*12)} 元</span></div>`:''}
+      </div>
+    </div>
+    <p class="note">※ 所有金額均來自勞保局及健保署官方文件，數據精確<br>※ 災保費率0.12%，由雇主全額負擔，員工不需付費</p>`;
+  box.classList.add('show');
+}
+
+// ===== 切換標籤 =====
+function switchTab(name, el) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  el.classList.add('active');
+}
+
+// ===== 問答 =====
+const QA = [
+  {keys:['勞保費率','勞工保險費率','12.5','11.5'],ans:'🛡️ <b>2026年勞工保險費率 12.5%</b><br>・普通事故保險：11.5%<br>・就業保險：1%<br>負擔：勞工20%、雇主70%、政府10%<br>最高級距45,800元，勞工固定1,145元'},
+  {keys:['災保','職災','0.12'],ans:'⚙️ <b>2026年職業災害保險費率 0.12%</b><br>・<b>雇主全額負擔</b>，勞工不需付費<br>・最高級距72,800元（第21級），超過固定87元/月'},
+  {keys:['健保費率','健保率','5.17'],ans:'🏥 <b>2026年健保費率 5.17%</b>（維持不變）<br>・個人：30%（眷屬每多1口多計1份，最多3口）<br>・雇主：60%（含平均眷口0.56人）<br>・政府：10%<br>最低29,500元，最高313,000元（共58級）'},
+  {keys:['勞退','提撥','雇主提'],ans:'💰 <b>勞工退休金 2026年</b><br>・雇主強制提撥6%，上限150,000元（超過固定9,000元）<br>・勞工自提0~6%，自提金額可全額免所得稅'},
+  {keys:['基本工資','最低薪資','29500'],ans:'📅 <b>2026年基本工資</b>（115.1.1起）<br>・月薪：29,500元（較2025年↑2,030元）<br>・時薪：196元（較2025年↑13元）'},
+  {keys:['眷屬','加保眷屬','家人'],ans:'👨‍👩‍👧 <b>健保眷屬加保</b><br>・可加保：配偶、父母、子女（直系血親）<br>・每多1口，個人多付一份30%健保費<br>・<b>最多計3口</b>，超過不再增加費用<br>・眷屬本身有工作者，應以工作單位為主投保'},
+  {keys:['自提','節稅','所得扣除'],ans:'✅ <b>勞退自提節稅優惠</b><br>自提金額可全額從當年度綜合所得稅扣除<br>舉例：月薪40,100元自提6%→每月2,406元<br>全年28,872元節稅，稅率20%省約5,774元'},
+  {keys:['二代健保','補充保費','2.11'],ans:'📌 <b>二代健保補充保費 2.11%</b><br>・獎金超過當月投保金額4倍的部分<br>・兼職超過基本工資29,500元的部分<br>・股利、利息、租金年度超過2萬元<br>由公司/銀行代扣，不需自行繳納'},
+  {keys:['幾天','加保期限','新員工','新進','到職'],ans:'📅 <b>新進員工加保</b><br>雇主須於員工<b>到職日當天或前一日</b>完成勞保、健保加保<br>・可至勞保局網路申報系統線上辦理<br>・未及時加保，事故發生時雇主須自行賠償'},
+  {keys:['投保薪資','申報','怎麼填'],ans:'📋 <b>投保薪資申報原則</b><br>依實際月薪資對應最接近且不低於的級距投保<br>・勞保最低29,500元，最高45,800元（11級）<br>・健保最低29,500元，最高313,000元（58級）<br>・薪資調漲後，當月或次月申請調整'},
+];
+function findAns(q){for(const item of QA){if(item.keys.some(k=>q.includes(k)))return item.ans;}return null;}
+function askQ(q){document.getElementById('chat-input').value=q;sendChat();}
+function sendChat(){
+  const input=document.getElementById('chat-input');
+  const q=input.value.trim();if(!q)return;
+  input.value='';addMsg('user',q);
+  setTimeout(()=>{
+    const ans=findAns(q);
+    addMsg('bot',ans||'感謝您的提問 😊<br>可問：勞保費率、災保費率、健保費率、勞退提撥、基本工資、眷屬加保、自提節稅、二代健保、新人加保、投保薪資申報<br>或直接切換標籤頁查詢完整數據！');
+  },300);
+}
+function addMsg(role,html){
+  const area=document.getElementById('chat-area');
+  const div=document.createElement('div');
+  div.className='msg '+role;
+  div.innerHTML=`<span class="avatar">${role==='bot'?'🤖':'👤'}</span><div class="msg-bubble">${html}</div>`;
+  area.appendChild(div);area.scrollTop=area.scrollHeight;
+}
+</script>
+</body>
+</html>
