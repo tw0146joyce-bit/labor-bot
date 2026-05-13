@@ -1,30 +1,18 @@
 # -*- coding: utf-8 -*-
 """
-勞健保 Telegram 機器人 2026年最新版
-功能：勞保/災保/健保/勞退費用試算、完整58級查詢、身障眷屬補助試算、常見問答
+2026年勞健保 Telegram 機器人
 """
 
 import os
-import sys
 import asyncio
 import logging
-import threading
-
-# Python 3.10+ requires explicit event loop creation
-try:
-    asyncio.get_event_loop()
-except RuntimeError:
-    asyncio.set_event_loop(asyncio.new_event_loop())
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import (
     Application, CommandHandler, MessageHandler,
-    CallbackQueryHandler, ContextTypes, ConversationHandler, filters
+    CallbackQueryHandler, ContextTypes, filters
 )
 
-# ============================================================
-# Token 從環境變數讀取（部署到 Render 時在後台設定，不需寫在程式裡）
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
-# ============================================================
 
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 
@@ -127,13 +115,11 @@ HEALTH = [
 def N(n): return f"{int(n):,}"
 
 def find_grade(salary):
-    """找最接近且不低於薪資的級距，回傳 index"""
     for i, row in enumerate(DATA):
         if salary <= row[0]:
             return i
     return len(DATA) - 1
 
-# ===== 主選單鍵盤 =====
 MAIN_KEYBOARD = ReplyKeyboardMarkup([
     ["🧮 費用試算", "📋 查詢級距"],
     ["♿ 身障補助試算", "❓ 常見問題"],
@@ -143,7 +129,6 @@ MAIN_KEYBOARD = ReplyKeyboardMarkup([
 
 WEB_URL = "https://tw0146joyce-bit.github.io/labor-bot/"
 
-# ===== /start =====
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "👋 您好！我是 *2026年勞健保計算機器人* 🤖\n\n"
@@ -154,7 +139,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=MAIN_KEYBOARD
     )
 
-# ===== /help =====
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "📖 *使用說明*\n\n"
@@ -170,7 +154,6 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="Markdown"
     )
 
-# ===== 費用試算 =====
 async def calc_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "🧮 *費用試算*\n\n"
@@ -187,9 +170,9 @@ async def do_calc(update: Update, context: ContextTypes.DEFAULT_TYPE, salary: in
     row = DATA[idx]
     grade, cLabor, cDis, cLaborDis, cPension, eLabor, note = row
     h = HEALTH[idx]
-    eHealth = h[dep]       # 員工健保（依眷屬）
-    cHealth = h[4]         # 雇主健保
-    cGov = h[5]            # 政府補助
+    eHealth = h[dep]
+    cHealth = h[4]
+    cGov = h[5]
     cTotal = cLaborDis + cPension + cHealth
     self_base = min(grade, 150000)
     self_amt = round(self_base * self_pct / 100)
@@ -219,7 +202,6 @@ async def do_calc(update: Update, context: ContextTypes.DEFAULT_TYPE, salary: in
     text += f"\n\n※ 數據來自勞保局＋健保署官方文件"
     await update.message.reply_text(text, parse_mode="Markdown")
 
-# ===== 查詢級距（分頁顯示） =====
 async def grade_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("第1-11級（29,500～45,800）", callback_data="grade_0")],
@@ -239,7 +221,6 @@ async def grade_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     notes_map = {10:"⭐勞保最高",20:"⭐災保最高",37:"⭐勞退最高",57:"⭐健保最高"}
     title = "📋 *2026年勞健保勞退級距表*\n*" + page_names[page] + "*"
     lines = [title, ""]
-    # 公司負擔
     lines.append("*── 公司負擔 ──*")
     lines.append("`級  投保額   勞保  災保  勞退  健保  公司合計`")
     for i in range(s, e):
@@ -257,7 +238,6 @@ async def grade_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if tag:
             lines.append(f"  {tag}（第{i+1}級）")
     lines.append("")
-    # 員工負擔
     lines.append("*── 員工負擔 ──*")
     lines.append("`級  投保額   勞保  健保  員工合計`")
     for i in range(s, e):
@@ -271,22 +251,19 @@ async def grade_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         lines.append(f"`{no} {sal} {elb} {ehi} {etot}`")
     await query.edit_message_text("\n".join(lines), parse_mode="Markdown")
 
-# ===== 身障補助試算 =====
 async def disability_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "♿ *身障眷屬健保補助試算*\n\n"
-        "*補助標準（針對眷屬持有身障手冊者）：*\n"
-        "・重度／極重度：政府補助 *1/2*，眷屬自付50%\n"
-        "・中度身障：政府補助 *1/3*，眷屬自付約67%\n"
-        "・輕度身障：政府補助 *1/4*，眷屬自付75%\n"
-        "・無身障：無補助，自付100%\n\n"
-        "請輸入：`身障 月薪 眷屬身障等級`\n\n"
-        "身障等級代碼：\n"
-        "`0` = 無身障　`1` = 輕度　`2` = 中度　`3` = 重度/極重度\n\n"
-        "範例（最多3位眷屬）：\n"
+        "補助標準（眷屬持身障手冊）：\n"
+        "・重度/極重度：補助1/2，自付50%\n"
+        "・中度：補助1/3，自付約67%\n"
+        "・輕度：補助1/4，自付75%\n\n"
+        "請輸入：`身障 月薪 眷屬等級...`\n"
+        "等級：0=無 1=輕度 2=中度 3=重度\n\n"
+        "範例：\n"
         "`身障 45800 1` — 1位輕度眷屬\n"
-        "`身障 45800 1 0 0` — 太太輕度、兒子無、女兒無\n"
-        "`身障 60000 3 2` — 2位眷屬，一重度一中度",
+        "`身障 45800 1 0 0` — 三位眷屬\n"
+        "`身障 60000 3 2` — 重度+中度",
         parse_mode="Markdown"
     )
 
@@ -294,12 +271,10 @@ async def do_disability(update: Update, context: ContextTypes.DEFAULT_TYPE, sala
     idx = find_grade(salary)
     grade = DATA[idx][0]
     h = HEALTH[idx]
-    self_fee = h[0]   # 本人健保30%
-    dep_base = h[0]   # 單名眷屬基數
-
+    self_fee = h[0]
+    dep_base = h[0]
     subsidy_map = {0: 0, 1: 0.25, 2: 1/3, 3: 0.5}
-    label_map   = {0:"無身障", 1:"輕度（補1/4）", 2:"中度（補1/3）", 3:"重度/極重度（補1/2）"}
-
+    label_map = {0:"無身障", 1:"輕度（補1/4）", 2:"中度（補1/3）", 3:"重度/極重度（補1/2）"}
     lines = [
         f"♿ *身障眷屬健保補助試算*",
         f"投保金額：{N(grade)} 元 ／ 眷屬 {len(levels)} 人",
@@ -308,7 +283,6 @@ async def do_disability(update: Update, context: ContextTypes.DEFAULT_TYPE, sala
         f"眷屬每人基數（30%）：{N(dep_base)} 元/人",
         ""
     ]
-
     dep_total = 0
     orig_total = 0
     for i, lv in enumerate(levels):
@@ -319,11 +293,9 @@ async def do_disability(update: Update, context: ContextTypes.DEFAULT_TYPE, sala
         orig_total += dep_base
         saved_str = f"（省{saved}元）" if saved > 0 else ""
         lines.append(f"眷屬{i+1}【{label_map[lv]}】：*{N(after)} 元* {saved_str}")
-
     grand = self_fee + dep_total
     orig_grand = self_fee + orig_total
     total_saved = orig_grand - grand
-
     lines += [
         "",
         f"眷屬保費合計：{N(dep_total)} 元",
@@ -332,15 +304,9 @@ async def do_disability(update: Update, context: ContextTypes.DEFAULT_TYPE, sala
     ]
     if total_saved > 0:
         lines.append(f"✅ 較一般身份每月省：*{N(total_saved)} 元*（年省 {N(total_saved*12)} 元）")
-
-    lines += [
-        "",
-        "※ 需向公司人資申報身障手冊，由公司向健保署申請",
-        "※ 資料來源：勞保局 bli.gov.tw/0005481.html"
-    ]
+    lines += ["", "※ 需向公司人資申報身障手冊", "※ 資料來源：bli.gov.tw/0005481.html"]
     await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
 
-# ===== 費率總表 =====
 async def show_rates(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = (
         "📊 *2026年勞健保費率總表*\n"
@@ -349,29 +315,26 @@ async def show_rates(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🛡️ *勞工保險 合計12.5%*\n"
         "・普通事故：11.5%\n"
         "・就業保險：1%\n"
-        "・勞工負擔20%，雇主70%，政府10%\n"
-        "・最高級距：45,800元（第11級）\n\n"
+        "・勞工20%，雇主70%，政府10%\n"
+        "・最高級距：45,800元\n\n"
         "⚙️ *職業災害保險 0.12%*\n"
-        "・雇主全額負擔，勞工不需付費\n"
-        "・最高級距：72,800元（第21級）\n\n"
+        "・雇主全額負擔\n"
+        "・最高級距：72,800元\n\n"
         "🏥 *全民健保 5.17%*\n"
         "・個人30%、雇主60%、政府10%\n"
-        "・眷屬每多1口多計1份30%（最多3口）\n"
-        "・最低29,500元，最高313,000元\n\n"
+        "・最低29,500元，最高313,000元（58級）\n\n"
         "💰 *勞退提撥*\n"
         "・雇主強制6%（上限150,000元）\n"
         "・勞工自提0~6%（全額免所得稅）\n\n"
         "📌 *二代健保補充費 2.11%*\n"
         "・獎金超投保金額4倍的部分\n"
-        "・兼職超29,500元的部分\n"
-        "・股利/租金年超2萬元的部分\n\n"
+        "・兼職超29,500元的部分\n\n"
         "📅 *2026年基本工資*\n"
-        "・月薪：29,500元（↑較2025多2,030元）\n"
-        "・時薪：196元（↑較2025多13元）"
+        "・月薪：29,500元\n"
+        "・時薪：196元"
     )
     await update.message.reply_text(text, parse_mode="Markdown")
 
-# ===== 常見問題 =====
 async def show_faq(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("勞保費率是多少？", callback_data="faq_labor")],
@@ -389,13 +352,13 @@ async def show_faq(update: Update, context: ContextTypes.DEFAULT_TYPE):
 FAQ = {
     "faq_labor": "🛡️ *2026年勞工保險費率*\n總費率：*12.5%*\n・普通事故：11.5%\n・就業保險：1%\n負擔比：勞工20%、雇主70%、政府10%\n最高級距45,800元，勞工固定扣 *1,145元/月*",
     "faq_dis":   "⚙️ *2026年職業災害保險費率*\n費率：*0.12%*\n・*雇主全額負擔*，勞工不需付費\n・最高級距72,800元，超過固定87元/月",
-    "faq_health": "🏥 *2026年健保費率 5.17%*\n・個人：30%\n・雇主：60%（含平均眷口0.56人）\n・政府：10%\n眷屬每多1口多1份30%，最多3口\n最低29,500元，最高313,000元（共58級）",
+    "faq_health": "🏥 *2026年健保費率 5.17%*\n・個人：30%\n・雇主：60%\n・政府：10%\n眷屬每多1口多1份30%，最多3口\n最低29,500元，最高313,000元（共58級）",
     "faq_pension":"💰 *勞工退休金 2026年*\n・雇主強制提撥6%\n・月提撥上限150,000元（超過固定9,000元）\n・勞工自提0~6%，自提全額免所得稅",
     "faq_dep":   "👨‍👩‍👧 *健保眷屬加保*\n可加保：配偶、父母、子女（直系血親）\n每多1口多計1份30%，最多3口\n眷屬本身有工作者，以工作單位投保為主",
     "faq_tax":   "✅ *勞退自提節稅*\n自提金額全額從綜合所得扣除\n舉例：月薪45,800，自提6%=每月2,748元\n全年32,976元，稅率20%省約 *6,595元*",
     "faq_supp":  "📌 *二代健保補充費 2.11%*\n・獎金超當月投保金額4倍\n・兼職超基本工資29,500元\n・股利/利息/租金年度超2萬元\n由公司/銀行代扣，不需自行繳納",
     "faq_new":   "📅 *新進員工加保規定*\n雇主須於到職日 *當天或前一日* 完成加保\n未及時加保發生事故，雇主須自行賠償\n2026年勞保局自動逕調至29,500元",
-    "faq_dis_dep":"♿ *身障眷屬健保補助*\n眷屬持有身障手冊者可申請：\n・重度/極重度：補助1/2，自付50%\n・中度：補助1/3，自付約67%\n・輕度：補助1/4，自付75%\n向公司人資申報，備妥身障手冊影本\n資料來源：bli.gov.tw/0005481.html",
+    "faq_dis_dep":"♿ *身障眷屬健保補助*\n眷屬持有身障手冊者可申請：\n・重度/極重度：補助1/2，自付50%\n・中度：補助1/3，自付約67%\n・輕度：補助1/4，自付75%\n向公司人資申報，備妥身障手冊影本",
 }
 
 async def faq_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -403,25 +366,22 @@ async def faq_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     await query.edit_message_text(FAQ.get(query.data, "查無資料"), parse_mode="Markdown")
 
-# ===== 訊息主處理 =====
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
 
-    # 按鈕觸發
-    if text == "🧮 費用試算":     await calc_menu(update, context); return
-    if text == "📋 查詢級距":     await grade_menu(update, context); return
-    if text == "♿ 身障補助試算":  await disability_menu(update, context); return
-    if text == "❓ 常見問題":     await show_faq(update, context); return
-    if text == "📊 費率總表":     await show_rates(update, context); return
-    if text == "ℹ️ 使用說明":     await help_cmd(update, context); return
+    if text == "🧮 費用試算":    await calc_menu(update, context); return
+    if text == "📋 查詢級距":    await grade_menu(update, context); return
+    if text == "♿ 身障補助試算": await disability_menu(update, context); return
+    if text == "❓ 常見問題":    await show_faq(update, context); return
+    if text == "📊 費率總表":    await show_rates(update, context); return
+    if text == "ℹ️ 使用說明":    await help_cmd(update, context); return
     if text == "🌐 網頁版計算機":
-        web_msg = "🌐 勞健保網頁版計算機\n\n點擊下方連結開啟網頁版，支援完整費用試算、級距查詢、身障補助計算：\n\n" + WEB_URL
+        web_msg = "🌐 *勞健保網頁版計算機*\n\n點擊下方連結開啟網頁版，支援完整費用試算、級距查詢、身障補助計算：\n\n" + WEB_URL
         await update.message.reply_text(web_msg, parse_mode="Markdown", reply_markup=MAIN_KEYBOARD)
         return
 
     parts = text.replace("，"," ").split()
 
-    # 試算指令：試算 40000 [dep] [self%]
     if parts[0] in ["試算","计算","labor"]:
         try:
             salary = int(parts[1])
@@ -433,11 +393,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("格式錯誤，請輸入：`試算 月薪 眷屬人數 自提%`\n例如：`試算 40000 2 6`", parse_mode="Markdown")
         return
 
-    # 身障試算：身障 45800 1 0 0
     if parts[0] in ["身障","身心障礙","disability"]:
         try:
             salary = int(parts[1])
-            levels = [min(int(x), 3) for x in parts[2:2+3]]  # 最多3位眷屬
+            levels = [min(int(x), 3) for x in parts[2:2+3]]
             if not levels:
                 await disability_menu(update, context)
                 return
@@ -451,7 +410,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         return
 
-    # 關鍵字自動回答
     for keys, faq_key in [
         (["勞保費率","12.5","11.5"], "faq_labor"),
         (["災保","職災","0.12"],     "faq_dis"),
@@ -467,7 +425,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(FAQ[faq_key], parse_mode="Markdown")
             return
 
-    # 預設
     await update.message.reply_text(
         "🤖 請選擇下方功能按鈕，或輸入：\n"
         "`試算 40000 2 6` — 費用試算\n"
@@ -477,7 +434,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 # ===== 主程式 =====
-import asyncio
 from aiohttp import web
 
 async def health_handler(request):
@@ -497,7 +453,6 @@ async def run_bot_async():
         await app.start()
         await app.updater.start_polling(allowed_updates=Update.ALL_TYPES)
         print('Bot is polling...')
-        # Keep running forever
         await asyncio.Event().wait()
         await app.updater.stop()
         await app.stop()
@@ -511,7 +466,7 @@ async def run_health_async():
     await runner.setup()
     site = web.TCPSite(runner, '0.0.0.0', port)
     await site.start()
-    print('Health server started on port ' + str(port))
+    print(f'Health server started on port {port}')
 
 async def main_async():
     await run_health_async()
