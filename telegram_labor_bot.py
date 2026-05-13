@@ -231,9 +231,9 @@ async def grade_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         sal = N(row[0]).rjust(7)
         lb = N(row[1]).rjust(5)
         dis = str(row[2]).rjust(4)
-        pen = N(row[3]).rjust(5)
+        pen = N(row[4]).rjust(5)
         chi = N(h[4]).rjust(5)
-        total_c = row[3] + h[4]
+        total_c = row[4] + h[4]
         lines.append(f"`{no} {sal} {lb} {dis} {pen} {chi} {N(total_c).rjust(7)}`")
         if tag:
             lines.append(f"  {tag}（第{i+1}級）")
