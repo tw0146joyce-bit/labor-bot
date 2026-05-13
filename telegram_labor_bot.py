@@ -235,17 +235,24 @@ async def grade_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     page = int(query.data.split("_")[1])
     ranges = [(0,11),(11,21),(21,38),(38,58)]
     s, e = ranges[page]
-    lines = [f"{'─'*32}\n📋 *勞保+災保+勞退+健保 級距表*\n{'─'*32}"]
-    lines.append("`級  投保額  員工勞保  員工健保  員工合計`")
+    page_names = ["第1-11級","第12-21級","第22-38級","第39-58級"]
+    notes_map = {10:"勞保最高",20:"災保最高",37:"勞退最高",57:"健保最高"}
+    title = "📋 *勞保+災保+勞退+健保 級距表*\n*" + page_names[page] + "*"
+    lines = [title, ""]
+    lines.append("`級 │ 投保額  │ 勞保  │ 健保  │ 合計`")
+    lines.append("`──┼────────┼──────┼──────┼──────`")
     for i in range(s, e):
         row = DATA[i]
         h = HEALTH[i]
-        note_tag = "⭐" if row[6] else "  "
-        lines.append(f"`{str(i+1).rjust(2)}{note_tag} {N(row[0]).rjust(7)}  {N(row[5]).rjust(6)}  {N(h[0]).rjust(6)}  {N(row[5]+h[0]).rjust(6)}`")
-    notes = {10:"⭐勞保最高",20:"⭐災保最高",37:"⭐勞退最高",57:"⭐健保最高"}
-    for k,v in notes.items():
-        if s <= k < e:
-            lines.append(f"  {v}（第{k+1}級）")
+        star = "⭐" if i in notes_map else "  "
+        no = str(i+1).rjust(2)
+        sal = N(row[0]).rjust(7)
+        lb = N(row[5]).rjust(5)
+        hi = N(h[0]).rjust(5)
+        tot = N(row[5]+h[0]).rjust(5)
+        lines.append(f"`{no}{star}│{sal} │{lb} │{hi} │{tot}`")
+        if i in notes_map:
+            lines.append(f"　　 ↑ {notes_map[i]}")
     await query.edit_message_text("\n".join(lines), parse_mode="Markdown")
 
 # ===== 身障補助試算 =====
