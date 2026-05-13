@@ -15,7 +15,6 @@ try:
     asyncio.get_event_loop()
 except RuntimeError:
     asyncio.set_event_loop(asyncio.new_event_loop())
-from http.server import HTTPServer, BaseHTTPRequestHandler
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import (
     Application, CommandHandler, MessageHandler,
@@ -448,46 +447,51 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 # ===== 主程式 =====
-class HealthHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b"OK")
-    def log_message(self, format, *args):
-        pass  # 靜音 HTTP log
+import asyncio
+from aiohttp import web
 
-def run_health_server():
-    port = int(os.environ.get("PORT", 10000))
-    server = HTTPServer(("0.0.0.0", port), HealthHandler)
-    server.serve_forever()
+async def health_handler(request):
+    return web.Response(text='OK')
 
-def run_bot():
-    import asyncio
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+async def run_bot_async():
     app = Application.builder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("help", help_cmd))
-    app.add_handler(CommandHandler("rates", show_rates))
-    app.add_handler(CommandHandler("faq", show_faq))
-    app.add_handler(CallbackQueryHandler(faq_callback, pattern="^faq_"))
-    app.add_handler(CallbackQueryHandler(grade_callback, pattern="^grade_"))
+    app.add_handler(CommandHandler('start', start))
+    app.add_handler(CommandHandler('help', help_cmd))
+    app.add_handler(CommandHandler('rates', show_rates))
+    app.add_handler(CommandHandler('faq', show_faq))
+    app.add_handler(CallbackQueryHandler(faq_callback, pattern='^faq_'))
+    app.add_handler(CallbackQueryHandler(grade_callback, pattern='^grade_'))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    print("Bot starting...")
-    app.run_polling(allowed_updates=Update.ALL_TYPES)
+    print('Bot starting...')
+    async with app:
+        await app.start()
+        await app.updater.start_polling(allowed_updates=Update.ALL_TYPES)
+        print('Bot is polling...')
+        # Keep running forever
+        await asyncio.Event().wait()
+        await app.updater.stop()
+        await app.stop()
+
+async def run_health_async():
+    port = int(os.environ.get('PORT', 10000))
+    web_app = web.Application()
+    web_app.router.add_get('/', health_handler)
+    web_app.router.add_get('/health', health_handler)
+    runner = web.AppRunner(web_app)
+    await runner.setup()
+    site = web.TCPSite(runner, '0.0.0.0', port)
+    await site.start()
+    print('Health server started on port ' + str(port))
+
+async def main_async():
+    await run_health_async()
+    await run_bot_async()
 
 def main():
     if not BOT_TOKEN:
-        print("ERROR: BOT_TOKEN not set")
+        print('ERROR: BOT_TOKEN not set')
         return
-    # Run bot in background thread
-    t = threading.Thread(target=run_bot, daemon=True)
-    t.start()
-    port = int(os.environ.get("PORT", 10000))
-    print("Health server started on port " + str(port))
-    # Run HTTP health server in main thread (keeps process alive)
-    server = HTTPServer(("0.0.0.0", port), HealthHandler)
-    server.serve_forever()
+    asyncio.run(main_async())
 
 if __name__ == "__main__":
     main()
