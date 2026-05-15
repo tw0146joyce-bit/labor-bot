@@ -196,7 +196,7 @@ async def do_calc(update: Update, context: ContextTypes.DEFAULT_TYPE, salary: in
         f"・政府補助健保（10%）：{N(cGov)} 元\n\n"
         f"👤 *員工每月扣繳*\n"
         f"・勞保（20%）：{N(eLabor)} 元\n"
-        f"・健保（30%・{dep_labels[dep]}）：{N(eHealth)} 元\n"
+        f"・健保（30%・{dep_labels[dep]}）：{N(h[0])}×{dep+1}＝{N(eHealth)} 元\n"
         f"・勞退自提（{self_pct}%）：{N(self_amt)} 元\n"
         f"・*員工合計：{N(eTotal)} 元*\n"
     )
