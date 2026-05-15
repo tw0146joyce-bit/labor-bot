@@ -450,7 +450,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if parts[0] in ["試算","计算","labor"]:
         try:
             salary = int(parts[1])
-            dep    = min(int(parts[2]) - 1, 3) if len(parts) >= 3 else 0
+            dep    = min(int(parts[2]), 3) if len(parts) >= 3 else 0
             dep    = max(dep, 0)
             selfp  = min(int(parts[3]), 6) if len(parts) >= 4 else 0
             await do_calc(update, context, salary, dep, selfp)
