@@ -283,25 +283,24 @@ async def do_disability(update: Update, context: ContextTypes.DEFAULT_TYPE, sala
         f"投保金額：{N(grade)} 元 ／ 眷屬 {len(levels)} 人",
         f"{'─'*28}",
         f"本人健保費（30%）：*{N(self_fee)} 元*",
-        f"眷屬每人基數（30%）：{N(dep_base)} 元/人",
         ""
     ]
     dep_total = 0
     orig_total = 0
+    ratio_map = {0: "", 1: "×0.75", 2: "×0.667", 3: "×0.5"}
     for i, lv in enumerate(levels):
         sub = subsidy_map.get(lv, 0)
         after = round(dep_base * (1 - sub))
         saved = dep_base - after
         dep_total += after
         orig_total += dep_base
-        saved_str = f"（省{saved}元）" if saved > 0 else ""
-        lines.append(f"眷屬{i+1}【{label_map[lv]}】：*{N(after)} 元* {saved_str}")
+        ratio_str = ratio_map.get(lv, "")
+        calc_str = f"（{N(dep_base)}{ratio_str}）" if lv > 0 else ""
+        lines.append(f"眷屬{i+1}【{label_map[lv]}】：*{N(after)} 元* {calc_str}")
     grand = self_fee + dep_total
     orig_grand = self_fee + orig_total
     total_saved = orig_grand - grand
     lines += [
-        "",
-        f"眷屬保費合計：{N(dep_total)} 元",
         f"{'─'*28}",
         f"💸 *本人＋眷屬合計：{N(grand)} 元/月*",
     ]
